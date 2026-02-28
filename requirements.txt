@@ -1,0 +1,18 @@
+# NeuroScan AI — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Web framework and server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Required for FastAPI to accept file uploads (multipart/form-data)
+python-multipart>=0.0.9
+
+# OpenAI Python SDK — for GPT-4o Vision API
+openai>=1.50.0
+
+# Image processing — validates and converts CT scan images
+Pillow>=10.4.0
+
+# Loads OPENAI_API_KEY from your .env file
+python-dotenv>=1.0.1
