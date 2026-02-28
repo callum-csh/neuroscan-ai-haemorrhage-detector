@@ -1,8 +1,10 @@
 import { useState, useCallback, useRef } from "react";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
+import HowItWorks from "@/components/HowItWorks";
 import UploadZone from "@/components/UploadZone";
 import ResultsPanel, { type AnalysisResult } from "@/components/ResultsPanel";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -10,7 +12,6 @@ const Index = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
   const uploadRef = useRef<HTMLDivElement>(null);
 
   const handleFileSelect = useCallback((f: File) => {
@@ -21,10 +22,9 @@ const Index = () => {
   }, []);
 
   const handleUploadClick = useCallback(() => {
-    setShowUpload(true);
     setTimeout(() => {
       uploadRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
+    }, 50);
   }, []);
 
   const handleAnalyse = useCallback(async () => {
@@ -57,67 +57,54 @@ const Index = () => {
     setImageUrl(null);
     setResult(null);
     setError(null);
-    setShowUpload(false);
   }, []);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
 
-      {!result ? (
-        <>
-          <HeroSection onUploadClick={handleUploadClick} />
+      <main className="flex-1">
+        <HeroSection onUploadClick={handleUploadClick} />
+        <HowItWorks />
 
-          {showUpload && (
-            <section ref={uploadRef} className="relative py-20 px-4">
-              {/* Background glow */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-[500px] h-[500px] rounded-full bg-primary/5 blur-[100px]" />
+        {/* Upload Section */}
+        <section ref={uploadRef} className="py-16 px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-primary">
+              Upload Your CT Scan
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Drag and drop or click to select your brain CT scan image
+            </p>
+          </div>
+
+          <UploadZone
+            onFileSelect={handleFileSelect}
+            selectedFile={file}
+            onAnalyse={handleAnalyse}
+            isLoading={isLoading}
+          />
+
+          {error && (
+            <div className="mx-auto mt-5 max-w-2xl">
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-3 text-center">
+                <p className="text-sm font-medium text-destructive">{error}</p>
               </div>
-
-              <div className="relative z-10">
-                <div className="text-center mb-10 opacity-0 animate-fade-in-up">
-                  <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-                    Upload Your <span className="gradient-text">CT Scan</span>
-                  </h2>
-                  <p className="mt-3 text-muted-foreground">
-                    Drag and drop or click to select your brain CT scan image
-                  </p>
-                </div>
-
-                <UploadZone
-                  onFileSelect={handleFileSelect}
-                  selectedFile={file}
-                  onAnalyse={handleAnalyse}
-                  isLoading={isLoading}
-                />
-
-                {error && (
-                  <div className="mx-auto mt-6 max-w-2xl">
-                    <div className="gradient-border rounded-xl bg-destructive/10 px-6 py-4 text-center">
-                      <p className="text-sm font-medium text-destructive animate-fade-in">
-                        {error}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
+            </div>
           )}
-        </>
-      ) : (
-        <>
-          {/* Spacer for fixed header */}
-          <div className="h-20" />
-          {imageUrl && (
-            <ResultsPanel
-              imageUrl={imageUrl}
-              result={result}
-              onReset={handleReset}
-            />
-          )}
-        </>
-      )}
+        </section>
+
+        {/* Results */}
+        {result && imageUrl && (
+          <ResultsPanel
+            imageUrl={imageUrl}
+            result={result}
+            onReset={handleReset}
+          />
+        )}
+      </main>
+
+      <Footer />
     </div>
   );
 };

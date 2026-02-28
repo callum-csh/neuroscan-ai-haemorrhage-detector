@@ -1,13 +1,20 @@
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, AlertTriangle } from "lucide-react";
+
+export interface MidlineShift {
+  detected: boolean;
+  direction?: string;
+  estimated_mm?: number;
+  notes?: string;
+}
 
 export interface AnalysisResult {
   haemorrhage_type: string;
   severity: string;
   description: string;
   procedure: string[];
+  midline_shift?: MidlineShift;
 }
 
 interface ResultsPanelProps {
@@ -16,29 +23,29 @@ interface ResultsPanelProps {
   onReset: () => void;
 }
 
-const severityColor = (severity: string) => {
+const severityStyle = (severity: string) => {
   const s = severity.toLowerCase();
-  if (s.includes("critical")) return "bg-destructive/20 text-destructive border-destructive/40 glow-red";
-  if (s.includes("high")) return "bg-orange-500/20 text-orange-400 border-orange-500/40";
-  if (s.includes("moderate")) return "bg-yellow-500/20 text-yellow-400 border-yellow-500/40";
-  return "bg-destructive/20 text-destructive border-destructive/40 glow-red";
+  if (s.includes("critical"))
+    return "bg-destructive/10 text-destructive border-destructive/30";
+  if (s.includes("high"))
+    return "bg-[hsl(38_92%_50%/0.1)] text-[hsl(38_92%_40%)] border-[hsl(38_92%_50%/0.3)]";
+  if (s.includes("moderate"))
+    return "bg-[hsl(142_72%_37%/0.1)] text-[hsl(142_72%_30%)] border-[hsl(142_72%_37%/0.3)]";
+  return "bg-muted text-muted-foreground border-border";
 };
 
 const ResultsPanel = ({ imageUrl, result, onReset }: ResultsPanelProps) => {
   return (
-    <section className="w-full py-12">
+    <section className="w-full py-12 opacity-0 animate-fade-in" style={{ animationDelay: "0.1s" }}>
       <div className="container mx-auto px-6">
-        <div className="mx-auto max-w-6xl space-y-8">
-          <div className="grid gap-8 md:grid-cols-2">
+        <div className="mx-auto max-w-5xl space-y-8">
+          <div className="grid gap-6 md:grid-cols-2">
             {/* Left — Uploaded Scan */}
-            <div
-              className="gradient-border rounded-2xl bg-card p-6 opacity-0 animate-fade-in-up"
-              style={{ animationDelay: "0.1s" }}
-            >
-              <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+            <div className="rounded-lg border border-border bg-card p-5">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Uploaded Scan
               </h3>
-              <div className="overflow-hidden rounded-xl border border-accent/20 glow-cyan">
+              <div className="overflow-hidden rounded-md border border-border">
                 <img
                   src={imageUrl}
                   alt="Uploaded CT scan"
@@ -48,62 +55,93 @@ const ResultsPanel = ({ imageUrl, result, onReset }: ResultsPanelProps) => {
             </div>
 
             {/* Right — Diagnosis */}
-            <div
-              className="gradient-border rounded-2xl bg-card p-8 flex flex-col glow-purple opacity-0 animate-fade-in-up"
-              style={{ animationDelay: "0.2s" }}
-            >
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-                Diagnosis Result
+            <div className="rounded-lg border border-border bg-card p-6 flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Diagnosis
               </span>
 
-              <p className="mt-4 text-3xl sm:text-4xl font-bold text-foreground leading-tight">
+              <p className="mt-3 text-2xl sm:text-3xl font-bold text-foreground leading-tight">
                 {result.haemorrhage_type}
               </p>
 
-              <div className={`mt-4 w-fit rounded-full border px-4 py-1.5 text-sm font-semibold ${severityColor(result.severity)}`}>
+              <div
+                className={`mt-3 w-fit rounded-full border px-3 py-1 text-xs font-semibold ${severityStyle(result.severity)}`}
+              >
                 {result.severity}
               </div>
 
-              <Separator className="my-6 bg-border/50" />
+              <Separator className="my-5" />
 
-              <p className="leading-relaxed text-secondary-foreground">
+              <p className="leading-relaxed text-muted-foreground text-sm">
                 {result.description}
               </p>
 
-              <Separator className="my-6 bg-border/50" />
+              {/* Midline Shift */}
+              {result.midline_shift && (
+                <>
+                  <Separator className="my-5" />
+                  <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Midline Shift Analysis
+                  </h4>
+                  {result.midline_shift.detected ? (
+                    <div className="rounded-md border border-[hsl(38_92%_50%/0.3)] bg-[hsl(38_92%_50%/0.06)] px-4 py-3 flex items-start gap-3">
+                      <AlertTriangle className="h-4 w-4 text-[hsl(38_92%_40%)] mt-0.5 shrink-0" />
+                      <div className="text-sm text-foreground space-y-1">
+                        <p className="font-medium">Midline shift detected</p>
+                        {result.midline_shift.estimated_mm != null && (
+                          <p className="text-muted-foreground">
+                            Estimated deviation: {result.midline_shift.estimated_mm} mm
+                            {result.midline_shift.direction && ` (${result.midline_shift.direction})`}
+                          </p>
+                        )}
+                        {result.midline_shift.notes && (
+                          <p className="text-muted-foreground">{result.midline_shift.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No significant midline shift detected.
+                    </p>
+                  )}
+                </>
+              )}
 
-              <h4 className="mb-4 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+              <Separator className="my-5" />
+
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Recommended Procedure
               </h4>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {result.procedure.map((step, i) => (
                   <div
                     key={i}
-                    className="flex gap-4 rounded-lg bg-secondary/50 px-4 py-3"
+                    className="flex gap-3 rounded-md bg-muted/60 px-4 py-2.5"
                   >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-xs font-bold bg-primary text-primary-foreground">
                       {i + 1}
                     </span>
-                    <span className="leading-relaxed text-secondary-foreground text-sm">
+                    <span className="leading-relaxed text-sm text-foreground">
                       {step}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <p className="mt-auto pt-8 text-xs text-muted-foreground">
-                For clinical decision support only. Always defer to a qualified radiologist.
+              <p className="mt-auto pt-6 text-xs text-muted-foreground">
+                For clinical decision support only. Always defer to a qualified
+                radiologist.
               </p>
             </div>
           </div>
 
-          <div className="flex justify-center opacity-0 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+          <div className="flex justify-center">
             <Button
               variant="outline"
               onClick={onReset}
               size="lg"
-              className="gradient-border rounded-xl px-8 py-6 text-base font-semibold hover:bg-secondary/50"
+              className="rounded-lg px-6 py-5 text-sm font-medium"
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               Run New Scan
