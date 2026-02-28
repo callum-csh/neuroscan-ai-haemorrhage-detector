@@ -109,6 +109,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
+        "http://localhost:8082",
+        "http://127.0.0.1:8082",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -117,11 +119,18 @@ app.add_middleware(
 
 # ─── Response Schema ─────────────────────────────────────────
 
+class MidlineShift(BaseModel):
+    detected: bool
+    direction: str   # "left", "right", or "none"
+    notes: str
+
 class AnalysisResult(BaseModel):
     haemorrhage_type: str
-    severity: str        # One of: "Critical" | "High" | "Moderate"
+    severity: str          # One of: "Critical" | "High" | "Moderate"
     description: str
-    procedure: list[str] # Always exactly 4 clinical action steps
+    procedure: list[str]   # Always exactly 4 clinical action steps
+    midline_shift: MidlineShift
+    surgery_required: bool # True if immediate neurosurgical intervention is likely needed
 
 # ─── OpenAI Client ───────────────────────────────────────────
 
@@ -143,6 +152,8 @@ def get_openai_client() -> openai.OpenAI:
 
 CLASSIFICATION_PROMPT = """You are an expert neuroradiology AI assistant. You are analysing a brain CT scan.
 
+── TASK 1: HAEMORRHAGE CLASSIFICATION ──────────────────────────────────────────
+
 Identify any intracranial haemorrhage and classify it into EXACTLY ONE of the following types:
   • Epidural Haemorrhage
   • Subdural Haemorrhage
@@ -156,6 +167,66 @@ For severity, choose EXACTLY ONE of:
   • High      — Urgent neurosurgical consultation required within hours
   • Moderate  — Requires hospital admission, close neurological monitoring
 
+── TASK 2: MIDLINE SHIFT ASSESSMENT ────────────────────────────────────────────
+
+Assess the CT scan for midline shift — lateral displacement of brain structures across the falx cerebri caused by swelling or mass effect from haemorrhage.
+
+Determine:
+  1. Whether midline shift is present (true) or absent (false).
+  2. If present, the direction of displacement: "left", "right", or "none" if absent.
+
+── TASK 3: CLINICAL PROCEDURE ───────────────────────────────────────────────────
+
+Generate a procedure array of exactly 4 steps written for an ER doctor or nurse.
+Each step must be a single, specific, actionable sentence using clinical terminology.
+Include drug names, dosage ranges, and decision thresholds where relevant.
+
+Structure the 4 steps as follows:
+
+  Step 1 — SURGERY DECISION: State explicitly whether immediate neurosurgical intervention
+    is required or whether conservative management is appropriate, and cite the specific
+    clinical thresholds from this scan that drive that decision. Use thresholds such as:
+      • Epidural: surgery if haematoma >30ml, thickness >15mm, or midline shift >5mm;
+        or GCS <8 or rapidly declining neuro status.
+      • Subdural (acute): surgery if clot >10mm thick, midline shift >5mm, or GCS drop ≥2.
+      • Subarachnoid: urgent neurovascular imaging (CTA/DSA) to identify aneurysm for
+        endovascular coiling or surgical clipping; EVD if hydrocephalus present.
+      • Intracerebral: surgery (craniotomy/craniectomy) if lobar haematoma >30ml with GCS <9,
+        cerebellar haematoma >3cm, or clinical deterioration; conservative if deep/basal ganglia
+        and small volume.
+      • Intraventricular: EVD placement indicated for obstructive hydrocephalus or ICP >20mmHg.
+
+  Step 2 — MEDICAL MANAGEMENT (ICP / REVERSAL): State the specific pharmacological
+    interventions indicated, tailored to the haemorrhage type. Include:
+      • ICP management: Mannitol 0.25–1g/kg IV bolus or hypertonic saline 3% if raised ICP
+        suspected (GCS <8, pupil asymmetry, Cushing's triad).
+      • Anticoagulation reversal if clinically indicated: 4-factor PCC (Beriplex/Octaplex)
+        25–50 units/kg IV for warfarin/DOAC; idarucizumab 5g IV for dabigatran;
+        andexanet alfa if factor Xa inhibitor; FFP 10–15ml/kg if PCC unavailable.
+      • Subarachnoid only: Nimodipine 60mg PO/NG q4h for 21 days to reduce vasospasm risk.
+      • Target: SBP <160mmHg (intracerebral) or MAP 70–100mmHg; avoid hypotension.
+
+  Step 3 — SEIZURE PROPHYLAXIS & NEUROPROTECTION: State whether seizure prophylaxis is
+    indicated and specify the agent. Levetiracetam 500–1000mg IV load is preferred for
+    cortical haemorrhage (intracerebral, subdural, subarachnoid); not routinely indicated
+    for epidural or intraventricular without cortical involvement. Also state head positioning
+    (30° head-of-bed elevation), glucose targets (4–10 mmol/L), and temperature management
+    (normothermia, treat fever >37.5°C aggressively).
+
+  Step 4 — DISPOSITION & MONITORING: State the appropriate care setting, monitoring
+    requirements, and follow-up imaging. Include repeat CT timing (e.g. 6-hour repeat CT
+    for haematoma expansion check), neuro-obs frequency (GCS, pupils q1h minimum),
+    and whether ICU admission or neurosurgical unit transfer is required.
+
+── SURGERY REQUIRED FIELD ───────────────────────────────────────────────────────
+
+Set "surgery_required" to true if, based on the haemorrhage type, severity, and scan
+findings (including any midline shift identified in Task 2), immediate neurosurgical
+intervention is likely required. Set to false if conservative management is appropriate
+as the initial approach.
+
+── OUTPUT FORMAT ────────────────────────────────────────────────────────────────
+
 Respond with ONLY a valid JSON object — no markdown, no code fences, no extra text.
 Use this exact structure:
 
@@ -163,12 +234,18 @@ Use this exact structure:
   "haemorrhage_type": "<type from list above>",
   "severity": "<Critical|High|Moderate>",
   "description": "<Two plain-English sentences: (1) what this haemorrhage type is and where it occurs, (2) what this means clinically for the patient>",
+  "surgery_required": <true|false>,
   "procedure": [
-    "<Step 1: immediate action>",
-    "<Step 2: diagnostic or monitoring action>",
-    "<Step 3: specialist involvement or intervention>",
-    "<Step 4: ongoing management or disposition>"
-  ]
+    "<Step 1: surgery decision with specific thresholds from this scan>",
+    "<Step 2: ICP management and/or anticoagulation reversal with drug names and doses>",
+    "<Step 3: seizure prophylaxis, neuroprotection, and supportive targets>",
+    "<Step 4: disposition, monitoring frequency, repeat imaging plan>"
+  ],
+  "midline_shift": {
+    "detected": <true|false>,
+    "direction": "<left|right|none>",
+    "notes": "<A single plain-English sentence stating only whether midline shift is present or absent and, if present, the direction. Example: 'Midline shift is present, displaced to the right.' or 'No midline shift detected.'>"
+  }
 }
 
 If the image does not appear to be a brain CT scan, or image quality is too poor to assess, return:
@@ -176,12 +253,18 @@ If the image does not appear to be a brain CT scan, or image quality is too poor
   "haemorrhage_type": "Image Quality Insufficient",
   "severity": "Moderate",
   "description": "The uploaded image could not be assessed as a brain CT scan. Please ensure you are uploading a DICOM export or CT screenshot in JPEG/PNG format.",
+  "surgery_required": false,
   "procedure": [
     "Re-upload a valid brain CT scan image",
     "Ensure the image is a standard axial brain CT slice",
     "Contact your PACS administrator if exporting from a DICOM viewer",
     "Consult a radiologist directly if urgent clinical assessment is needed"
-  ]
+  ],
+  "midline_shift": {
+    "detected": false,
+    "direction": "none",
+    "notes": "Midline shift could not be assessed due to insufficient image quality."
+  }
 }"""
 
 # ─── Image Helpers ───────────────────────────────────────────
@@ -255,7 +338,7 @@ def classify_ct_scan(image_bytes: bytes) -> AnalysisResult:
                     ],
                 }
             ],
-            max_tokens=700,
+            max_tokens=1200,
             temperature=0.1,  # Low temperature = more consistent, factual output
         )
     except openai.AuthenticationError:
@@ -306,11 +389,31 @@ def classify_ct_scan(image_bytes: bytes) -> AnalysisResult:
         procedure.append("Monitor patient vitals and neurological status closely.")
     procedure = procedure[:4]
 
+    # Parse and validate midline_shift
+    raw_shift = data.get("midline_shift", {})
+    valid_directions = {"left", "right", "none"}
+    direction = raw_shift.get("direction", "none")
+    if direction not in valid_directions:
+        direction = "none"
+
+    midline_shift = MidlineShift(
+        detected=bool(raw_shift.get("detected", False)),
+        direction=direction,
+        notes=raw_shift.get("notes", "Midline shift assessment was not available."),
+    )
+
+    # Parse surgery_required — default True (safer) if missing or unparseable
+    surgery_required = data.get("surgery_required")
+    if not isinstance(surgery_required, bool):
+        surgery_required = True
+
     return AnalysisResult(
         haemorrhage_type=data.get("haemorrhage_type", "Unknown"),
         severity=data["severity"],
         description=data.get("description", "No description available."),
         procedure=procedure,
+        midline_shift=midline_shift,
+        surgery_required=surgery_required,
     )
 
 # ─── Endpoints ───────────────────────────────────────────────

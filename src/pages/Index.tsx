@@ -94,7 +94,7 @@ const Index = () => {
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
                   NeuroScan AI
                 </p>
-                <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tight text-primary">
+                <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tight text-foreground">
                   Brain Haemorrhage Classification
                 </h1>
                 <p className="text-base text-muted-foreground max-w-md">
@@ -130,8 +130,8 @@ const Index = () => {
                 </div>
 
                 {error && (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
-                    <p className="text-sm font-medium text-destructive">{error}</p>
+                  <div className="rounded-lg px-4 py-3" style={{ background: "#450a0a", border: "1px solid #dc2626" }}>
+                    <p className="text-sm font-medium" style={{ color: "#fca5a5" }}>{error}</p>
                   </div>
                 )}
               </div>
@@ -152,7 +152,7 @@ const Index = () => {
             <p className="text-lg font-semibold text-primary">
               Analysing scan…
             </p>
-            <Progress value={undefined} className="h-1.5 w-64 [&>div]:animate-pulse" />
+            <Progress value={undefined} className="h-1.5 w-64 [&>div]:animate-pulse [&>div]:bg-primary" />
             <p className="text-xs text-muted-foreground">
               Powered by GPT-4o Vision
             </p>

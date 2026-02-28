@@ -6,47 +6,48 @@
 
 @layer base {
   :root {
-    --background: 210 25% 96%;
-    --foreground: 215 28% 17%;
+    /* ── Radiology dark theme ── */
+    --background: 216 43% 4%;        /* #080c10 near-black */
+    --foreground: 214 32% 91%;       /* #e2e8f0 off-white */
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 28% 17%;
+    --card: 216 29% 7%;              /* #0d1117 dark surface */
+    --card-foreground: 214 32% 91%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 28% 17%;
+    --popover: 216 29% 7%;
+    --popover-foreground: 214 32% 91%;
 
-    --primary: 213 70% 18%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 189 96% 43%;          /* #06b6d4 cyan */
+    --primary-foreground: 216 43% 4%;
 
-    --secondary: 210 16% 95%;
+    --secondary: 216 20% 12%;
     --secondary-foreground: 215 16% 47%;
 
-    --muted: 210 14% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 216 20% 12%;
+    --muted-foreground: 215 16% 40%; /* #64748b */
 
-    --accent: 166 84% 29%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 189 96% 43%;           /* cyan accent */
+    --accent-foreground: 216 43% 4%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 213 70% 18%;
+    --border: 210 31% 18%;           /* #1e2d3d */
+    --input: 210 31% 18%;
+    --ring: 189 96% 43%;
 
     --radius: 0.5rem;
 
     --warning: 38 92% 50%;
     --success: 142 72% 37%;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 215 28% 17%;
-    --sidebar-primary: 213 70% 18%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 16% 95%;
-    --sidebar-accent-foreground: 215 28% 17%;
-    --sidebar-border: 214 20% 88%;
-    --sidebar-ring: 213 70% 18%;
+    --sidebar-background: 216 43% 4%;
+    --sidebar-foreground: 214 32% 91%;
+    --sidebar-primary: 189 96% 43%;
+    --sidebar-primary-foreground: 216 43% 4%;
+    --sidebar-accent: 216 20% 12%;
+    --sidebar-accent-foreground: 214 32% 91%;
+    --sidebar-border: 210 31% 18%;
+    --sidebar-ring: 189 96% 43%;
   }
 }
 

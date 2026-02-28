@@ -1,6 +1,31 @@
-import { useRef, useMemo } from "react";
+import { useRef, useEffect, Component, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+
+// ─── Error boundary ──────────────────────────────────────────────────────────
+// Catches WebGL / Three.js runtime errors so the rest of the page keeps working.
+
+interface BoundaryState { hasError: boolean }
+
+class BrainCanvasErrorBoundary extends Component<
+  { children: ReactNode; width: number; height: number },
+  BoundaryState
+> {
+  state: BoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): BoundaryState {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div style={{ width: this.props.width, height: this.props.height }} />;
+    }
+    return this.props.children;
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface BrainMeshProps {
   speed?: number;
@@ -9,32 +34,19 @@ interface BrainMeshProps {
 function BrainMesh({ speed = 0.3 }: BrainMeshProps) {
   const groupRef = useRef<THREE.Group>(null);
   const { pointer } = useThree();
+  const { scene } = useGLTF("/brain.glb");
 
-  // Create organic brain-like geometry from merged distorted spheres
-  const geometry = useMemo(() => {
-    const geo = new THREE.IcosahedronGeometry(1.5, 4);
-    const pos = geo.attributes.position;
-    const v = new THREE.Vector3();
+  // Replace every mesh material with cyan wireframe
+  useEffect(() => {
+    const mat = new THREE.MeshBasicMaterial({ color: "#06b6d4", wireframe: true });
+    scene.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        (obj as THREE.Mesh).material = mat;
+      }
+    });
+  }, [scene]);
 
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i);
-
-      // Create hemisphere split and organic folds
-      const fold = Math.sin(v.x * 4) * 0.06 + Math.sin(v.y * 6) * 0.04 + Math.cos(v.z * 5) * 0.05;
-      // Central fissure
-      const fissure = Math.exp(-v.x * v.x * 8) * -0.12;
-      // Temporal lobe bulge
-      const temporal = Math.exp(-(v.y + 0.5) * (v.y + 0.5) * 3) * 0.08;
-
-      const scale = 1 + fold + fissure + temporal;
-      v.multiplyScalar(scale);
-      pos.setXYZ(i, v.x, v.y, v.z);
-    }
-
-    geo.computeVertexNormals();
-    return geo;
-  }, []);
-
+  // Auto-rotation + cursor tracking
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     groupRef.current.rotation.y += delta * speed;
@@ -51,23 +63,8 @@ function BrainMesh({ speed = 0.3 }: BrainMeshProps) {
   });
 
   return (
-    <group ref={groupRef}>
-      <mesh geometry={geometry}>
-        <meshStandardMaterial
-          color="#0f2b4e"
-          wireframe
-          transparent
-          opacity={0.35}
-        />
-      </mesh>
-      <mesh geometry={geometry}>
-        <meshStandardMaterial
-          color="#0d9488"
-          transparent
-          opacity={0.08}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+    <group ref={groupRef} scale={2.5} position={[0, 0, 0]}>
+      <primitive object={scene} />
     </group>
   );
 }
@@ -78,13 +75,17 @@ interface BrainVisualProps {
 }
 
 const BrainVisual = ({ size = 340, speed = 0.3 }: BrainVisualProps) => (
-  <div style={{ width: size, height: size }}>
-    <Canvas camera={{ position: [0, 0, 4], fov: 45 }}>
-      <ambientLight intensity={0.9} />
-      <directionalLight position={[5, 5, 5]} intensity={0.4} />
-      <BrainMesh speed={speed} />
-    </Canvas>
-  </div>
+  <BrainCanvasErrorBoundary width={size} height={size}>
+    <div style={{ width: size, height: size }}>
+      <Canvas camera={{ position: [0, 0, 4], fov: 45 }}>
+        <ambientLight intensity={0.9} />
+        <directionalLight position={[5, 5, 5]} intensity={0.4} />
+        <BrainMesh speed={speed} />
+      </Canvas>
+    </div>
+  </BrainCanvasErrorBoundary>
 );
+
+useGLTF.preload("/brain.glb");
 
 export default BrainVisual;

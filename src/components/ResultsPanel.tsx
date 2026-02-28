@@ -1,3 +1,4 @@
+import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle } from "lucide-react";
 
@@ -14,6 +15,7 @@ export interface AnalysisResult {
   description: string;
   procedure: string[];
   midline_shift?: MidlineShift;
+  surgery_required: boolean;
 }
 
 interface ResultsPanelProps {
@@ -21,15 +23,15 @@ interface ResultsPanelProps {
   result: AnalysisResult;
 }
 
-const severityBadge = (severity: string) => {
+const severityBadge = (severity: string): React.CSSProperties => {
   const s = severity.toLowerCase();
   if (s.includes("critical"))
-    return "bg-destructive text-destructive-foreground";
+    return { background: "#450a0a", color: "#fca5a5", border: "1px solid #dc2626" };
   if (s.includes("high"))
-    return "bg-[hsl(38_92%_50%)] text-white";
+    return { background: "#431407", color: "#fdba74", border: "1px solid #ea580c" };
   if (s.includes("moderate"))
-    return "bg-[hsl(142_72%_37%)] text-white";
-  return "bg-muted text-muted-foreground";
+    return { background: "#052e16", color: "#86efac", border: "1px solid #16a34a" };
+  return { background: "#1e2d3d", color: "#94a3b8" };
 };
 
 const ResultsPanel = ({ imageUrl, result }: ResultsPanelProps) => (
@@ -59,14 +61,28 @@ const ResultsPanel = ({ imageUrl, result }: ResultsPanelProps) => (
       </p>
 
       <div
-        className={`mt-3 w-fit rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${severityBadge(result.severity)}`}
+        className="mt-3 w-fit rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide"
+        style={severityBadge(result.severity)}
       >
         {result.severity}
       </div>
 
+      <div
+        className="mt-4 rounded-md px-4 py-2.5 text-sm"
+        style={
+          result.surgery_required
+            ? { background: "#450a0a", borderLeft: "4px solid #dc2626", color: "#fca5a5" }
+            : { background: "#052e16", borderLeft: "4px solid #16a34a", color: "#86efac" }
+        }
+      >
+        {result.surgery_required
+          ? "⚠ Immediate neurosurgical intervention likely required"
+          : "✓ Conservative management appropriate — monitor closely"}
+      </div>
+
       <Separator className="my-5" />
 
-      <p className="leading-relaxed text-muted-foreground text-sm">
+      <p style={{ color: "#cbd5e1", fontSize: "0.95rem", lineHeight: "1.6" }}>
         {result.description}
       </p>
 
@@ -74,8 +90,8 @@ const ResultsPanel = ({ imageUrl, result }: ResultsPanelProps) => (
       {result.midline_shift?.detected && (
         <>
           <Separator className="my-5" />
-          <div className="rounded-md border border-[hsl(38_92%_50%/0.3)] bg-[hsl(38_92%_50%/0.06)] px-4 py-3 flex items-start gap-3">
-            <AlertTriangle className="h-4 w-4 text-[hsl(38_92%_40%)] mt-0.5 shrink-0" />
+          <div className="rounded-md px-4 py-3 flex items-start gap-3" style={{ background: "#431407", border: "1px solid #d97706" }}>
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#fcd34d" }} />
             <div className="text-sm text-foreground space-y-0.5">
               <p className="font-medium">
                 Midline shift detected
@@ -95,6 +111,10 @@ const ResultsPanel = ({ imageUrl, result }: ResultsPanelProps) => (
       )}
 
       <Separator className="my-5" />
+
+      <p className="mb-5 pt-5 text-lg" style={{ borderTop: "1px solid #1e2d3d", color: "#94a3b8", fontWeight: 500 }}>
+        Always follow local hospital guidelines and consult neurosurgery.
+      </p>
 
       <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         Recommended Procedure
@@ -116,7 +136,7 @@ const ResultsPanel = ({ imageUrl, result }: ResultsPanelProps) => (
         ))}
       </div>
 
-      <p className="mt-auto pt-6 text-[11px] text-muted-foreground">
+      <p className="mt-auto pt-6 text-[11px]" style={{ color: "#475569" }}>
         For clinical decision support only. Always defer to a qualified radiologist.
       </p>
     </div>
